@@ -250,6 +250,29 @@ export const makeGitManager = Effect.gen(function* () {
   const gitHubCli = yield* GitHubCli;
   const textGeneration = yield* TextGeneration;
 
+  const resolveOrEnsureForkRemote = (
+    cwd: string,
+    repositoryNameWithOwner: string,
+    headRepositoryOwnerLogin: string | null | undefined,
+  ) =>
+    Effect.gen(function* () {
+      const cloneUrls = yield* gitHubCli.getRepositoryCloneUrls({
+        cwd,
+        repository: repositoryNameWithOwner,
+      });
+      const originRemoteUrl = yield* gitCore.readConfigValue(cwd, "remote.origin.url");
+      const remoteUrl = shouldPreferSshRemote(originRemoteUrl) ? cloneUrls.sshUrl : cloneUrls.url;
+      const preferredRemoteName =
+        headRepositoryOwnerLogin?.trim() ||
+        repositoryNameWithOwner.split("/")[0]?.trim() ||
+        "fork";
+      return yield* gitCore.ensureRemote({
+        cwd,
+        preferredName: preferredRemoteName,
+        url: remoteUrl,
+      });
+    });
+
   const configurePullRequestHeadUpstream = (
     cwd: string,
     pullRequest: ResolvedPullRequest & PullRequestHeadRemoteInfo,
@@ -260,21 +283,11 @@ export const makeGitManager = Effect.gen(function* () {
         return;
       }
 
-      const cloneUrls = yield* gitHubCli.getRepositoryCloneUrls({
+      const remoteName = yield* resolveOrEnsureForkRemote(
         cwd,
-        repository: repositoryNameWithOwner,
-      });
-      const originRemoteUrl = yield* gitCore.readConfigValue(cwd, "remote.origin.url");
-      const remoteUrl = shouldPreferSshRemote(originRemoteUrl) ? cloneUrls.sshUrl : cloneUrls.url;
-      const preferredRemoteName =
-        pullRequest.headRepositoryOwnerLogin?.trim() ||
-        repositoryNameWithOwner.split("/")[0]?.trim() ||
-        "fork";
-      const remoteName = yield* gitCore.ensureRemote({
-        cwd,
-        preferredName: preferredRemoteName,
-        url: remoteUrl,
-      });
+        repositoryNameWithOwner,
+        pullRequest.headRepositoryOwnerLogin,
+      );
 
       yield* gitCore.setBranchUpstream({
         cwd,
@@ -306,21 +319,11 @@ export const makeGitManager = Effect.gen(function* () {
         return;
       }
 
-      const cloneUrls = yield* gitHubCli.getRepositoryCloneUrls({
+      const remoteName = yield* resolveOrEnsureForkRemote(
         cwd,
-        repository: repositoryNameWithOwner,
-      });
-      const originRemoteUrl = yield* gitCore.readConfigValue(cwd, "remote.origin.url");
-      const remoteUrl = shouldPreferSshRemote(originRemoteUrl) ? cloneUrls.sshUrl : cloneUrls.url;
-      const preferredRemoteName =
-        pullRequest.headRepositoryOwnerLogin?.trim() ||
-        repositoryNameWithOwner.split("/")[0]?.trim() ||
-        "fork";
-      const remoteName = yield* gitCore.ensureRemote({
-        cwd,
-        preferredName: preferredRemoteName,
-        url: remoteUrl,
-      });
+        repositoryNameWithOwner,
+        pullRequest.headRepositoryOwnerLogin,
+      );
 
       yield* gitCore.fetchRemoteBranch({
         cwd,
