@@ -213,7 +213,7 @@ export function BranchToolbarBranchSelector({
 
       let nextBranchName = selectedBranchName;
       if (branch.isRemote) {
-        const status = await api.git.status({ cwd: branchCwd }).catch(() => null);
+        const status = await api.git.status({ cwd: selectionTarget.checkoutCwd }).catch(() => null);
         if (status?.branch) {
           nextBranchName = status.branch;
         }
