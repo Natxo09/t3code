@@ -116,7 +116,7 @@ export function BranchToolbarBranchSelector({
   const checkoutPullRequestItemValue = prReference && onCheckoutPullRequestRequest
     ? `__checkout_pull_request__:${prReference}`
     : null;
-  const canCreateBranch = !isSelectingWorktreeBase && trimmedBranchQuery.length > 0;
+  const canCreateBranch = effectiveEnvMode === "local" && trimmedBranchQuery.length > 0;
   const hasExactBranchMatch = branchByName.has(trimmedBranchQuery);
   const createBranchItemValue = canCreateBranch
     ? `__create_new_branch__:${trimmedBranchQuery}`
